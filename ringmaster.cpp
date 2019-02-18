@@ -6,6 +6,7 @@
 #include <string>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <vector>
 
 #include "potato.h"
 
@@ -24,7 +25,8 @@ int main(int argc, char *argv[]) {
   const char *port = argv[1];
   int num_players = stoi(argv[2]);
   int num_hops = stoi(argv[3]);
-
+  vector<string> player_ports;
+  vector<string> player_addr;
   memset(&host_info, 0, sizeof(host_info));
 
   host_info.ai_family = AF_UNSPEC;
@@ -73,7 +75,7 @@ int main(int argc, char *argv[]) {
   int client_connection_fd[num_players];
   struct sockaddr_in socket_addr[num_players];
   socklen_t socket_addr_len = sizeof(socket_addr[0]);
-  while (curr_players < num_players - 1) {
+  while (curr_players < num_players) {
     // cout << "Waiting for connection on port " << port << endl;
     client_connection_fd[curr_players] =
         accept(socket_fd, (struct sockaddr *)&socket_addr[num_players],
@@ -82,43 +84,40 @@ int main(int argc, char *argv[]) {
       cerr << "Error: cannot accept connection on socket" << endl;
       return -1;
     } // if
+    char addr_buf[512];
+    recv(client_connection_fd[curr_players], addr_buf, sizeof(addr_buf), 0);
+    string player_address(addr_buf);
+    player_addr.push_back(player_address);
+    char port_buf[512];
+    recv(client_connection_fd[curr_players], port_buf, sizeof(port_buf), 0);
+    string player_port(port_buf);
+    player_ports.push_back(player_port);
 
     cout << "Player " << curr_players << " is ready to play" << endl;
-    curr_players++;
-  }
 
-  // send each player himself next player's hostname and port
-  for (int i = 0; i < num_players; i++) {
-    struct in_addr in_addr;
-    unsigned long addr;
-    unsigned short port;
-    in_addr = socket_addr[i].sin_addr;
-    addr = in_addr.s_addr;
-    port = socket_addr[i].sin_port;
-    string message = to_string(addr) + " " + to_string(port);
-    const char *msg = message.c_str();
-    send(client_connection_fd[i], msg, strlen(msg), 0);
+    curr_players++;
   }
 
   // send each player his next player's hostname and port
   for (int i = 0; i < num_players; i++) {
-    struct in_addr in_addr;
-    unsigned long addr;
-    unsigned short port;
+    string addr_next;
+    string port_next;
     if (i == num_players - 1) {
-      in_addr = socket_addr[0].sin_addr;
-      addr = in_addr.s_addr;
-      port = socket_addr[0].sin_port;
-    } else {
-      in_addr = socket_addr[i + 1].sin_addr;
-      addr = in_addr.s_addr;
-      port = socket_addr[i + 1].sin_port;
-    }
-    string message = to_string(addr) + " " + to_string(port);
-    const char *msg = message.c_str();
-    send(client_connection_fd[i], msg, strlen(msg), 0);
-  }
 
+      addr_next = player_addr[0];
+      port_next = player_ports[0];
+    } else {
+      addr_next = player_addr[i + 1];
+      port_next = player_ports[i + 1];
+    }
+    cout << "player " << i << ": " << addr_next << port_next << endl;
+    const char *addr_msg = addr_next.c_str();
+    const char *port_msg = port_next.c_str();
+    send(client_connection_fd[i], addr_msg, strlen(addr_msg), 0);
+    send(client_connection_fd[i], port_msg, strlen(port_msg), 0);
+  }
+  cout << "sent each player his next player's hostname and port" << endl;
+  /*
   if (num_hops > 0) {
     // randomly choose a player to send potato
     srand((unsigned int)time(NULL));
@@ -132,7 +131,7 @@ int main(int argc, char *argv[]) {
 
     // receive the potato after the game ends
   }
-
+  */
   // close the game
   freeaddrinfo(host_info_list);
   close(socket_fd);
