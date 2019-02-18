@@ -81,8 +81,8 @@ int main(int argc, char *argv[]) {
     status_prev =
         getaddrinfo(addr_buf, port_prev, &host_info_prev, &host_info_list_prev);
     if (status_prev != 0) {
-      cerr << "Error: cannot get address info for next player" << endl;
-      cerr << "  (" << addr_buf << "," << port_prev << ")" << endl;
+      cerr << "Error: cannot get address info for curr player" << endl;
+      cerr << "  (" << addr_buf << ", " << port_prev << ")" << endl;
       return -1;
     } // if
 
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
       getaddrinfo(addr_next, port_next, &host_info_next, &host_info_list_next);
   if (status_next != 0) {
     cerr << "Error: cannot get address info for next player" << endl;
-    cerr << "  (" << addr_next << "," << port_next << ")" << endl;
+    cerr << "  (" << addr_next << ", " << port_next << ")" << endl;
     return -1;
   } // if
 

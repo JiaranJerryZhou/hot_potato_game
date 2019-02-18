@@ -110,11 +110,11 @@ int main(int argc, char *argv[]) {
       addr_next = player_addr[i + 1];
       port_next = player_ports[i + 1];
     }
-    cout << "player " << i << ": " << addr_next << port_next << endl;
+    cout << "player " << i << ": " << addr_next << " " << port_next << endl;
     const char *addr_msg = addr_next.c_str();
     const char *port_msg = port_next.c_str();
-    send(client_connection_fd[i], addr_msg, strlen(addr_msg), 0);
-    send(client_connection_fd[i], port_msg, strlen(port_msg), 0);
+    send(client_connection_fd[i], addr_msg, 512, 0);
+    send(client_connection_fd[i], port_msg, 512, 0);
   }
   cout << "sent each player his next player's hostname and port" << endl;
   /*
