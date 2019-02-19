@@ -185,6 +185,7 @@ int main(int argc, char *argv[]) {
             // close the game
             freeaddrinfo(host_info_list);
             close(socket_fd);
+            delete[] client_connection_fd;
             return 0;
           }
         }

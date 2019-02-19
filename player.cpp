@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
   host_info_prev.ai_socktype = SOCK_STREAM;
   host_info_prev.ai_flags = AI_PASSIVE;
 
-  char addr_buf[512];
+  char addr_buf[512] = "";
   status = gethostname(addr_buf, sizeof(addr_buf));
   // bind a new port to create server
   srand((unsigned int)time(NULL));
@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
   // send address and port to ringmaster
   send(socket_fd, addr_buf, sizeof(addr_buf), 0);
   const char *port_buf = to_string(valid_port).c_str();
-  send(socket_fd, port_buf, sizeof(addr_buf), 0);
+  send(socket_fd, port_buf, sizeof(port_buf), 0);
 
   // listen
   status_prev = listen(socket_fd_prev, 10);
@@ -230,6 +230,7 @@ int main(int argc, char *argv[]) {
           FD_CLR(i, &master); // remove from master set
         } else {
           // we got some data from elsewhere
+          cout << buf << endl;
           if (strcmp(buf, "gameover") == 0) {
             // game over
             freeaddrinfo(host_info_list);
