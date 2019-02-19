@@ -1,10 +1,15 @@
+#include <arpa/inet.h>
 #include <cstring>
 #include <iostream>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <string>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 #include <vector>
 
@@ -72,14 +77,13 @@ int main(int argc, char *argv[]) {
 
   // create the ring
   int curr_players = 0;
-  int client_connection_fd[num_players];
-  struct sockaddr_in socket_addr[num_players];
-  socklen_t socket_addr_len = sizeof(socket_addr[0]);
+  int *client_connection_fd = new int[num_players];
+  struct sockaddr_in socket_addr;
+  socklen_t socket_addr_len = sizeof(socket_addr);
   while (curr_players < num_players) {
     // cout << "Waiting for connection on port " << port << endl;
     client_connection_fd[curr_players] =
-        accept(socket_fd, (struct sockaddr *)&socket_addr[num_players],
-               &socket_addr_len);
+        accept(socket_fd, (struct sockaddr *)&socket_addr, &socket_addr_len);
     if (client_connection_fd[curr_players] == -1) {
       cerr << "Error: cannot accept connection on socket" << endl;
       return -1;
@@ -99,6 +103,7 @@ int main(int argc, char *argv[]) {
   }
 
   // send each player his next player's hostname and port
+  // send them their id
   for (int i = 0; i < num_players; i++) {
     string addr_next;
     string port_next;
@@ -113,11 +118,13 @@ int main(int argc, char *argv[]) {
     cout << "player " << i << ": " << addr_next << " " << port_next << endl;
     const char *addr_msg = addr_next.c_str();
     const char *port_msg = port_next.c_str();
+    const char *id_msg = to_string(i).c_str();
     send(client_connection_fd[i], addr_msg, 512, 0);
     send(client_connection_fd[i], port_msg, 512, 0);
+    send(client_connection_fd[i], id_msg, 512, 0);
   }
   cout << "sent each player his next player's hostname and port" << endl;
-  /*
+
   if (num_hops > 0) {
     // randomly choose a player to send potato
     srand((unsigned int)time(NULL));
@@ -125,15 +132,68 @@ int main(int argc, char *argv[]) {
     cout << "Ready to start the game, sending potato to player " << random
          << endl;
     potato my_potato;
-    my_potato.hop = num_hops;
+    my_potato.target = num_hops;
+    my_potato.hop = 0;
     my_potato.id[0] = random;
-    send(client_connection_fd[random], &my_potato, sizeof(&my_potato), 0);
+    send(client_connection_fd[random], "potato", 512, 0);
+    send(client_connection_fd[random], &my_potato, sizeof(my_potato), 0);
 
     // receive the potato after the game ends
+    // select
+    fd_set master;
+    int fdmax = 0;
+    for (int i = 0; i < num_players; i++) {
+      if (client_connection_fd[i] > fdmax) {
+        fdmax = client_connection_fd[i];
+      }
+      FD_SET(client_connection_fd[i], &master);
+    }
+    fd_set read_fds;
+    int nbytes;
+    while (true) {
+      read_fds = master;
+      if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
+        perror("select");
+        return -1;
+      }
+      // check if any port returns the potato
+      for (int i = 0; i < fdmax; i++) {
+        if (FD_ISSET(i, &read_fds)) {
+          // handle potato or signal
+          if ((nbytes = recv(i, &my_potato, sizeof(my_potato), 0)) <= 0) {
+            // got error or connection closed by client
+            if (nbytes == 0) {
+              // connection closed
+              printf("selectserver: socket %d hung up\n", i);
+            } else {
+              perror("recv");
+            }
+            close(i);           // bye!
+            FD_CLR(i, &master); // remove from master set
+          } else {
+            // we got the potato
+            cout << "Trace of potato: ";
+            for (int i = 0; i < num_hops - 1; i++) {
+              cout << my_potato.id[i] << ", ";
+            }
+            cout << my_potato.id[num_hops - 1] << endl;
+            // close all players sockets
+            for (int i = 0; i < num_players; i++) {
+              send(client_connection_fd[i], "gameover", 512, 0);
+              close(client_connection_fd[i]);
+            }
+            // close the game
+            freeaddrinfo(host_info_list);
+            close(socket_fd);
+            return 0;
+          }
+        }
+      }
+    }
   }
-  */
   // close the game
   freeaddrinfo(host_info_list);
   close(socket_fd);
+  delete[] client_connection_fd;
   return 0;
 }

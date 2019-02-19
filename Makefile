@@ -1,3 +1,4 @@
+CPPFLAGS=-ggdb3 -Wall -Werror -pedantic -std=gnu++11
 TARGETS=ringmaster player
 
 all: $(TARGETS)
@@ -5,7 +6,7 @@ clean:
 	rm -f $(TARGETS) *~
 
 ringmaster: ringmaster.cpp
-	g++ -g -o $@ $<
+	g++ $(CPPFLAGS) -g -o $@ $<
 
 player: player.cpp
-	g++ -g -o $@ $<
+	g++ $(CPPFLAGS) -g -o $@ $<

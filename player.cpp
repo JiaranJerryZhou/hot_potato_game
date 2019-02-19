@@ -1,13 +1,17 @@
+#include "potato.h"
+#include <algorithm>
+#include <arpa/inet.h>
 #include <cstring>
 #include <iostream>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <string>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
-
-#include "potato.h"
 
 using namespace std;
 
@@ -136,10 +140,13 @@ int main(int argc, char *argv[]) {
 
   // create a socket to connect to next player
   // receive next player's information from master
+  // receive itself id
   char addr_next[512];
   char port_next[512];
+  char id[512];
   recv(socket_fd, addr_next, sizeof(addr_next), 0);
   recv(socket_fd, port_next, sizeof(port_next), 0);
+  recv(socket_fd, id, sizeof(id), 0);
   status_next =
       getaddrinfo(addr_next, port_next, &host_info_next, &host_info_list_next);
   if (status_next != 0) {
@@ -179,6 +186,99 @@ int main(int argc, char *argv[]) {
   } // if
   cout << "connected to prev player" << endl;
 
+  // send its id to next and prev player
+  char id_prev[512];
+  char id_next[512];
+  send(socket_fd_next, id, 512, 0);
+  recv(client_connection_fd, id_prev, 512, 0);
+  send(client_connection_fd, id, 512, 0);
+  recv(socket_fd_next, id_next, 512, 0);
+
+  cout << id_next << endl;
+  cout << id_prev << endl;
+
+  // pass potatos!
+  // create a set of readfds
+  fd_set master;
+  FD_SET(socket_fd, &master);
+  FD_SET(socket_fd_next, &master);
+  FD_SET(client_connection_fd, &master);
+  fd_set read_fds;
+  int fdmax = max(max(socket_fd, socket_fd_next), client_connection_fd);
+  int nbytes;
+  char buf[512];
+  potato my_potato;
+  while (true) {
+    read_fds = master;
+    if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
+      perror("select");
+      return -1;
+    }
+    // run through existing connections looking for data to read
+    for (int i = 0; i <= fdmax; i++) {
+      if (FD_ISSET(i, &read_fds)) {
+        // handle potato or signal
+        if ((nbytes = recv(i, buf, sizeof(buf), 0)) <= 0) {
+          // got error or connection closed by client
+          if (nbytes == 0) {
+            // connection closed
+            printf("selectserver: socket %d hung up\n", i);
+          } else {
+            perror("recv");
+          }
+          close(i);           // bye!
+          FD_CLR(i, &master); // remove from master set
+        } else {
+          // we got some data from elsewhere
+          if (strcmp(buf, "gameover") == 0) {
+            // game over
+            freeaddrinfo(host_info_list);
+            close(socket_fd);
+            freeaddrinfo(host_info_list_next);
+            close(socket_fd_next);
+            freeaddrinfo(host_info_list_prev);
+            close(socket_fd_prev);
+            close(client_connection_fd);
+            return 0;
+          } else if (strcmp(buf, "potato") == 0) {
+            // potato arrives
+            recv(i, &my_potato, sizeof(my_potato), 0);
+            my_potato.id[my_potato.hop] = stoi(id);
+            my_potato.hop++;
+            // game over
+            if (my_potato.hop == my_potato.target) {
+              cout << "I'm it" << endl;
+              send(socket_fd, &my_potato, sizeof(my_potato), 0);
+            }
+            // send to next player
+            else {
+              int pass_to = rand() % 2;
+              // pass to prev player
+              if (pass_to == 0) {
+                cout << "Sending potato to " << id_prev << endl;
+                send(client_connection_fd, "potato", 512, 0);
+                send(client_connection_fd, &my_potato, sizeof(potato), 0);
+              }
+              // send to next player
+              else if (pass_to == 1) {
+                cout << "Sending potato to " << id_next << endl;
+                send(socket_fd_next, "potato", 512, 0);
+                send(socket_fd_next, &my_potato, sizeof(potato), 0);
+              } else {
+                perror("no player to send");
+                return -1;
+              }
+            }
+
+          } else {
+            perror("unrecognized signal");
+            return -1;
+          }
+        }
+      }
+    }
+  }
+
   // end game
   freeaddrinfo(host_info_list);
   close(socket_fd);
@@ -186,4 +286,5 @@ int main(int argc, char *argv[]) {
   close(socket_fd_next);
   freeaddrinfo(host_info_list_prev);
   close(socket_fd_prev);
+  return 0;
 }
