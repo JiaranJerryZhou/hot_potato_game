@@ -125,6 +125,17 @@ int main(int argc, char *argv[]) {
   }
   cout << "sent each player his next player's hostname and port" << endl;
 
+  fd_set master;
+  int fdmax = 0;
+  for (int i = 0; i < num_players; i++) {
+    if (client_connection_fd[i] > fdmax) {
+      fdmax = client_connection_fd[i];
+    }
+    FD_SET(client_connection_fd[i], &master);
+  }
+  fd_set read_fds;
+  int nbytes;
+
   if (num_hops > 0) {
     // randomly choose a player to send potato
     srand((unsigned int)time(NULL));
@@ -135,21 +146,12 @@ int main(int argc, char *argv[]) {
     my_potato.target = num_hops;
     my_potato.hop = 0;
     my_potato.id[0] = random;
+    char signal[512];
     send(client_connection_fd[random], "potato", 512, 0);
     send(client_connection_fd[random], &my_potato, sizeof(my_potato), 0);
 
     // receive the potato after the game ends
     // select
-    fd_set master;
-    int fdmax = 0;
-    for (int i = 0; i < num_players; i++) {
-      if (client_connection_fd[i] > fdmax) {
-        fdmax = client_connection_fd[i];
-      }
-      FD_SET(client_connection_fd[i], &master);
-    }
-    fd_set read_fds;
-    int nbytes;
     while (true) {
       read_fds = master;
       if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
@@ -157,10 +159,10 @@ int main(int argc, char *argv[]) {
         return -1;
       }
       // check if any port returns the potato
-      for (int i = 0; i < fdmax; i++) {
+      for (int i = 0; i <= fdmax; i++) {
         if (FD_ISSET(i, &read_fds)) {
           // handle potato or signal
-          if ((nbytes = recv(i, &my_potato, sizeof(potato), 0)) <= 0) {
+          if ((nbytes = recv(i, signal, 512, 0)) <= 0) {
             // got error or connection closed by client
             if (nbytes == 0) {
               // connection closed
@@ -172,6 +174,8 @@ int main(int argc, char *argv[]) {
             FD_CLR(i, &master); // remove from master set
           } else {
             // we got the potato
+            cout << "we got potato" << endl;
+            recv(i, &my_potato, sizeof(potato), 0);
             cout << "Trace of potato: ";
             for (int i = 0; i < num_hops - 1; i++) {
               cout << my_potato.id[i] << ", ";

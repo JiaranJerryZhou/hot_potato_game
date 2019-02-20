@@ -249,7 +249,9 @@ int main(int argc, char *argv[]) {
             // game over
             if (my_potato.hop == my_potato.target) {
               cout << "I'm it" << endl;
+              send(socket_fd, "sendback", 512, 0);
               send(socket_fd, &my_potato, sizeof(potato), 0);
+              cout << "sending potato to master" << endl;
             }
             // send to next player
             else {
