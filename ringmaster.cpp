@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
       for (int i = 0; i < fdmax; i++) {
         if (FD_ISSET(i, &read_fds)) {
           // handle potato or signal
-          if ((nbytes = recv(i, &my_potato, sizeof(my_potato), 0)) <= 0) {
+          if ((nbytes = recv(i, &my_potato, sizeof(potato), 0)) <= 0) {
             // got error or connection closed by client
             if (nbytes == 0) {
               // connection closed

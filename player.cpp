@@ -243,13 +243,13 @@ int main(int argc, char *argv[]) {
             return 0;
           } else if (strcmp(buf, "potato") == 0) {
             // potato arrives
-            recv(i, &my_potato, sizeof(my_potato), 0);
+            recv(i, &my_potato, sizeof(my_potato), MSG_WAITALL);
             my_potato.id[my_potato.hop] = stoi(id);
             my_potato.hop++;
             // game over
             if (my_potato.hop == my_potato.target) {
               cout << "I'm it" << endl;
-              send(socket_fd, &my_potato, sizeof(my_potato), 0);
+              send(socket_fd, &my_potato, sizeof(potato), 0);
             }
             // send to next player
             else {
