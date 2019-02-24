@@ -197,6 +197,9 @@ int main(int argc, char *argv[]) {
   cout << id_next << endl;
   cout << id_prev << endl;
 
+  // need to inform ringmaster connection
+  send(socket_fd, "1", 1, 0);
+
   // pass potatos!
   // create a set of readfds
   fd_set master;

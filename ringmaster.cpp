@@ -127,11 +127,13 @@ int main(int argc, char *argv[]) {
 
   fd_set master;
   int fdmax = 0;
+  char inform[1];
   for (int i = 0; i < num_players; i++) {
     if (client_connection_fd[i] > fdmax) {
       fdmax = client_connection_fd[i];
     }
     FD_SET(client_connection_fd[i], &master);
+    recv(client_connection_fd[i], inform, 1, 0);
   }
   fd_set read_fds;
   int nbytes;
