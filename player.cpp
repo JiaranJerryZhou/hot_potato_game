@@ -49,8 +49,8 @@ int main(int argc, char *argv[]) {
     return -1;
   } // if
 
-  cout << "Connecting to " << machine_name << " on port " << port << "..."
-       << endl;
+  //  cout << "Connecting to " << machine_name << " on port " << port << "..."
+  //  << endl;
 
   status =
       connect(socket_fd, host_info_list->ai_addr, host_info_list->ai_addrlen);
@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
     random++;
     valid_port = random;
   }
-  cout << "bind to a new port " << valid_port << endl;
+  //  cout << "bind to a new port " << valid_port << endl;
 
   // send address and port to ringmaster
   send(socket_fd, addr_buf, sizeof(addr_buf), 0);
@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
     return -1;
   } // if
 
-  cout << "Waiting for connection on port " << valid_port << endl;
+  //  cout << "Waiting for connection on port " << valid_port << endl;
 
   // connect to next player
   int status_next;
@@ -144,9 +144,13 @@ int main(int argc, char *argv[]) {
   char addr_next[512];
   char port_next[512];
   char id[512];
+  int total[1];
   recv(socket_fd, addr_next, sizeof(addr_next), 0);
   recv(socket_fd, port_next, sizeof(port_next), 0);
   recv(socket_fd, id, sizeof(id), 0);
+  recv(socket_fd, total, sizeof(int), 0);
+  cout << "Connected as player " << id << " out of " << total[0]
+       << " total players" << endl;
   status_next =
       getaddrinfo(addr_next, port_next, &host_info_next, &host_info_list_next);
   if (status_next != 0) {
@@ -164,8 +168,8 @@ int main(int argc, char *argv[]) {
     return -1;
   } // if
 
-  cout << "Connecting to next player " << addr_next << " on port " << port_next
-       << "..." << endl;
+  //  cout << "Connecting to next player " << addr_next << " on port " <<
+  //  port_next << "..." << endl;
 
   status_next = connect(socket_fd_next, host_info_list_next->ai_addr,
                         host_info_list_next->ai_addrlen);
@@ -184,7 +188,7 @@ int main(int argc, char *argv[]) {
     cerr << "Error: cannot accept connection on socket" << endl;
     return -1;
   } // if
-  cout << "connected to prev player" << endl;
+  // cout << "connected to prev player" << endl;
 
   // send its id to next and prev player
   char id_prev[512];
@@ -194,8 +198,8 @@ int main(int argc, char *argv[]) {
   send(client_connection_fd, id, 512, 0);
   recv(socket_fd_next, id_next, 512, 0);
 
-  cout << id_next << endl;
-  cout << id_prev << endl;
+  // cout << id_next << endl;
+  // cout << id_prev << endl;
 
   // need to inform ringmaster connection
   send(socket_fd, "1", 1, 0);
@@ -233,7 +237,7 @@ int main(int argc, char *argv[]) {
           FD_CLR(i, &master); // remove from master set
         } else {
           // we got some data from elsewhere
-          cout << buf << endl;
+          // cout << buf << endl;
           if (strcmp(buf, "gameover") == 0) {
             // game over
             freeaddrinfo(host_info_list);
@@ -254,7 +258,7 @@ int main(int argc, char *argv[]) {
               cout << "I'm it" << endl;
               send(socket_fd, "sendback", 512, 0);
               send(socket_fd, &my_potato, sizeof(potato), 0);
-              cout << "sending potato to master" << endl;
+              // cout << "sending potato to master" << endl;
             }
             // send to next player
             else {

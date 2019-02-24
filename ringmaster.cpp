@@ -115,15 +115,16 @@ int main(int argc, char *argv[]) {
       addr_next = player_addr[i + 1];
       port_next = player_ports[i + 1];
     }
-    cout << "player " << i << ": " << addr_next << " " << port_next << endl;
+    // cout << "player " << i << ": " << addr_next << " " << port_next << endl;
     const char *addr_msg = addr_next.c_str();
     const char *port_msg = port_next.c_str();
     const char *id_msg = to_string(i).c_str();
     send(client_connection_fd[i], addr_msg, 512, 0);
     send(client_connection_fd[i], port_msg, 512, 0);
     send(client_connection_fd[i], id_msg, 512, 0);
+    send(client_connection_fd[i], &num_players, sizeof(int), 0);
   }
-  cout << "sent each player his next player's hostname and port" << endl;
+  //  cout << "sent each player his next player's hostname and port" << endl;
 
   fd_set master;
   int fdmax = 0;
@@ -176,9 +177,9 @@ int main(int argc, char *argv[]) {
             FD_CLR(i, &master); // remove from master set
           } else {
             // we got the potato
-            cout << "we got potato" << endl;
+            //      cout << "we got potato" << endl;
             recv(i, &my_potato, sizeof(potato), 0);
-            cout << "Trace of potato: ";
+            cout << "Trace of potato: " << endl;
             for (int i = 0; i < num_hops - 1; i++) {
               cout << my_potato.id[i] << ", ";
             }
