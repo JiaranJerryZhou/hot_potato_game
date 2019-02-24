@@ -197,6 +197,10 @@ int main(int argc, char *argv[]) {
     }
   }
   // close the game
+  for (int i = 0; i < num_players; i++) {
+    send(client_connection_fd[i], "gameover", 512, 0);
+    close(client_connection_fd[i]);
+  }
   freeaddrinfo(host_info_list);
   close(socket_fd);
   delete[] client_connection_fd;
